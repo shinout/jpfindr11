@@ -1,0 +1,8 @@
+<?php
+define("BITLY_USERNAME", "");
+define("BITLY_APIKEY", "");
+define("TWITTER_CKEY", "");
+define("TWITTER_CSEC", "");
+define("TWITTER_AKEY", "");
+define("TWITTER_ASEC", "");
+
