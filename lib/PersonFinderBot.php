@@ -114,7 +114,6 @@ class PersonFinderBot {
     $this->l("token[asec]:".$token["asec"]);
 
     $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
-    return;
     $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
     $this->l("tweet request. result in detail is ->". $result);
 
