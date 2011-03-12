@@ -1,6 +1,4 @@
 <?php
-define("BITLY_USERNAME", "personfinder");
-define("BITLY_APIKEY", "R_1f318818b76294b4755de76e6b16e211");
 define("TWITTER_CKEY", "");
 define("TWITTER_CSEC", "");
 
