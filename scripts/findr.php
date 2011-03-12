@@ -8,10 +8,16 @@ class PersonFinderBot {
   private $token_filename = "tokens.tsv";
   private $bitly_filename = "bitlys.tsv";
 
+  private function l($str) {
+    echo $str."\n";
+  }
+
   public function execute() {
     list($home_state, $str) = $this->parseXML();
-    $this->loadTokens();
-    tweet($home_state, $str);
+    $this->l("XML was parsed.");
+    $this->l("str: ".$str);
+    $this->l("home_state: ".$home_state);
+    $this->tweet($home_state, $str);
   }
 
 
@@ -82,9 +88,9 @@ class PersonFinderBot {
       $tokens[$pref] = array("akey"=>$akey, "asec"=>$asec);
     }
     return $tokens;
-
   }
 
+/*
   private function getHomeState($name) {
     $states = array(
       "青森" => array("青森", "青森県"),
@@ -102,17 +108,43 @@ class PersonFinderBot {
     }
     return "その他";
   }
+*/
+
+  private function getStates() {
+    $states = array();
+    $states["青森"] = array("青森", "青森県");
+    $states["岩手"] = array("岩手", "岩手県");
+    $states["茨城"] = array("茨城", "茨城県");
+    $states["長野"] = array("長野", "長野県");
+    $states["福島"] = array("福島", "福島県");
+    $states["宮城"] = array("宮城", "宮城県");
+    return $states;
+
+    return "その他";
+  }
 
 
   private function tweet($home_state, $str) {
-    $home_state = $this->getHomeState($home_state);
+    $states = $this->getStates();
+    $valid_home_state = "その他";
+    foreach ($states as $k => $v) {
+      foreach($v as $a) {
+        if ($a == $home_state) {
+          $valid_home_state = $k;
+        }
+      }
+    }
+
     $tokens = $this->loadTokens();
-    $token  = $tokens[$home_state];
-    var_dump($token);
-    exit;
+    $token  = $tokens[$valid_home_state];
+
+    $this->l("token[akey]:".$token["akey"]);
+    $this->l("token[asec]:".$token["asec"]);
 
     $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, $token["akey"], $token["asec"]);
-    $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
+
+    $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
+    $this->l("tweeted. result in detail :", $result);
   }
 }
 
