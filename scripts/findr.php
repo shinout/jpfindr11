@@ -44,8 +44,21 @@ class PersonFinderBot {
       }
       $uri=explode("/",$uri);
       $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1];
+
       list($bitly_user, $bitly_key) = $this->getBitLy();
-      $url=bitly($uri, $bitly_user, $bitly_key );
+      $url = bitly($uri, $bitly_user, $bitly_key );
+      $counter = 1;
+      while (substr($url,0,5) == "ERROR" && $counter < 5) {
+        $this->l("getting from bit.ly: failed. $counter time.");
+        $url=bitly($uri, $bitly_user, $bitly_key );
+        $counter++;
+      }
+      $this->l("Final URL from bit.ly: ".$url);
+      if (substr($url,0,5) == "ERROR") {
+        $this->l("Could't get shorten URL from bit.ly, then use original one.");
+        $url = $uri;
+      }
+
       $time=date("Y.m.d H:i:s",strtotime($time));
       $address = (strcmp($home_state,'')==0 && strcmp($home_city,'')==0 && strcmp($home_street,'')==0)
                   ? "住所未記入"
@@ -119,8 +132,6 @@ class PersonFinderBot {
     $states["福島"] = array("福島", "福島県");
     $states["宮城"] = array("宮城", "宮城県");
     return $states;
-
-    return "その他";
   }
 
 
