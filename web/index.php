@@ -65,7 +65,8 @@ switch ($state) {
     $content .= '<br /><a href="'.$request_link.'">'.$request_link.'</a>';
 
 
-    header("Location: $request_link");
+    echo $content;
+    //header("Location: $request_link");
     break;
 
   case 'returned':
@@ -84,9 +85,16 @@ switch ($state) {
 
 	// Twitter名をセッションに格納
 	$_SESSION['username'] = $tok["screen_name"];
+  var_dump($_SESSION);
+  echo  '<p>account name: <span style="color: green;">'.$_SESSION['username'].'</span></p>';
+  echo  '<p>consumer key: <span style="color: blue;">'.$_SESSION['oauth_access_token'].'</span></p>';
+  echo  '<p>consumer key secret: <span style="color: red;">'.$_SESSION['oauth_access_token_secret'].'</span></p>';
 
 	//Topページへ戻る
-	header("Location: /");
+
+  $_SESSION['oauth_state'] = $state = 'request';
+  echo  '<p><a href="/?test=clear">BACK TO TOP</a></p>';
+	//header("Location: /");
 
 }
 
