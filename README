@@ -1,4 +1,15 @@
-Person Finder RSS Parser
-Only for Japan.
+使用には
+  twitter API key
+    および
+  bit.lyのAPI key
+  が必要です。
 
-TwitterOAuth -> https://github.com/abraham/twitteroauth
+
+インストール方法
+
+  git clone git://github.com/shinout/jpfindr11.git
+  cd jpfindr11
+  sh ./install.sh
+
+
+
