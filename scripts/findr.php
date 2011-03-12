@@ -141,10 +141,15 @@ class PersonFinderBot {
     $this->l("token[akey]:".$token["akey"]);
     $this->l("token[asec]:".$token["asec"]);
 
-    $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, $token["akey"], $token["asec"]);
+    $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
+    $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
+    $this->l("tweet request. result in detail is ->". $result);
 
+
+    /*
     $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
     $this->l("tweeted. result in detail :", $result);
+    */
   }
 }
 
