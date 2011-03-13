@@ -1,7 +1,7 @@
 <?php
 $script_dir = dirname(__FILE__);
 require("${script_dir}/../keys.php"); // make your own key file.
-require("${script_dir}/twitteroauth/twitteroauth/twitteroauth.php");
+require("${script_dir}/PersonFinderTwitterOAuth.php");
 require("${script_dir}/libfnc-bitly.php");
 require("${script_dir}/PersonFinderPlace.php");
 
@@ -13,8 +13,8 @@ class PersonFinderBot {
   /* ログを出力 */
   public function l($str) { echo $str."\n"; }
 
-  /* エントリ. ここをたたけ。 */
-  public function execute() {
+  /* PersonFinderのXMLを取得してツイートします */
+  public function tweetXMLData() {
     $parsed_arr = $this->parseXML();
     $this->l("XML was parsed.");
     $this->l("got ".count($parsed_arr)." data from the XML.");
@@ -26,6 +26,15 @@ class PersonFinderBot {
       $this->l("place: ".$place->__toString());
       $this->tweet($place, $str);
     }
+  }
+
+  /*
+   * param1: $state : "岩手", "青森", などのあれをいれましょう。
+   * param2: $str   : つぶやきたい文字をいれましょう。140字以内です。もちろん。
+   */
+  public function tweetString($state, $str) {
+    $place = new PersonFinderPlace($state, "", "");
+    $this->tweet($place, $str);
   }
 
   /* XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す */
@@ -176,7 +185,7 @@ class PersonFinderBot {
       $str = mb_substr($str,0,140, "UTF-8");
     }
 
-    $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
+    $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
     $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
     $this->l("tweet request. result in detail is ->". $result);
 

@@ -2,3 +2,4 @@ keys.php
 tokens.tsv
 tmp/*
 scripts/tweetest.php
+scripts/xauth_test.php

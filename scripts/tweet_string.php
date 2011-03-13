@@ -4,4 +4,4 @@ require("${script_dir}/../lib/PersonFinderBot.php");
 
 /* 実行スクリプト */
 $pf = new PersonFinderBot();
-$pf->tweetXMLData();
+$pf->tweetString($argv[1], $argv[2]);
