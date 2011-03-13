@@ -72,7 +72,7 @@ class PersonFinderBot {
       $place = new PersonFinderPlace($home_state, $home_city, $home_street);
       $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
-      $str = sprintf("「%s」さん（%s）を探しています。%s。by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
+      $str = sprintf("「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
