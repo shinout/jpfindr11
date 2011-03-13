@@ -130,7 +130,8 @@ class PersonFinderPlace {
   /* City情報からTwitter地域名を取得 */
   private function getTwitterKeyByCity() {
     foreach ($this->getCityExps() as $name => $city) {
-      if ( preg_match("/".$city."/", strtolower($this->__toString()))) {
+      if ( preg_match("/ ".$city."/", strtolower(" ".$this->__toString()))) {
+                    //  ^  ここにスペースを入れているのは、南大野田が大野にマッチしてしまわないようにするためだ
         return $this->getStateByCity($name);
       }
     }
