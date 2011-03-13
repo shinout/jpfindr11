@@ -63,7 +63,8 @@ class PersonFinderPlace {
     $ret = array();
     $this->loadCitiesFile();
     foreach (array_keys($this->cities) as $city) {
-      $ret[$city] = preg_quote($city);
+      //$ret[$city] = preg_quote($city);
+      $ret[$city] = $city;
     }
     return $ret;
   }

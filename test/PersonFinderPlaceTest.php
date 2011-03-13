@@ -71,3 +71,7 @@ $pfp = new PersonFinderPlace("", "", "陸前高田市");
   l("陸前高田市 in street");
   var_dump( $pfp->getTwitterKey() == "岩手");
 
+$pfp = new PersonFinderPlace("", "", "Kamaishi");
+  l("Kamaishi in street");
+  var_dump( $pfp->getTwitterKey() == "岩手");
+
