@@ -14,15 +14,22 @@ class PersonFinderBot {
 
   /* エントリ. ここをたたけ。 */
   public function execute() {
-    list($place, $str) = $this->parseXML();
+    $parsed_arr = $this->parseXML();
     $this->l("XML was parsed.");
-    $this->l("str: ".$str);
-    $this->l("place: ".$place->__toString());
-    $this->tweet($place, $str);
+    $this->l("got ".count($parsed_arr)." data from the XML.");
+    foreach ($parsed_arr as $i=>$parsed) {
+      $n = $i+1;
+      $this->l("------data $n  -------");
+      list($place, $str) = $parsed;
+      $this->l("str: ".$str);
+      $this->l("place: ".$place->__toString());
+      $this->tweet($place, $str);
+    }
   }
 
   /* XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す */
   protected function parseXML() {
+    $parsed_arr = array();
     $tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person?key=".PERSONFINDER_KEY);
     //$tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person");
     $rep=str_replace("<pfif:","<", $tmp);
@@ -66,8 +73,9 @@ class PersonFinderBot {
       $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
       $str = sprintf("「%s」さん（%s）を探しています。%s。by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
-      return array($place, $str);
+      $parsed_arr[] = array($place, $str);
     }
+    return $parsed_arr;
   }
 
   /* BitLyのアカウントのいずれかを取得 */
