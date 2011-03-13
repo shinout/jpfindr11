@@ -23,7 +23,8 @@ class PersonFinderBot {
 
   /* XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す */
   protected function parseXML() {
-    $tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person");
+    $tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person?key=".PERSONFINDER_KEY);
+    //$tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person");
     $rep=str_replace("<pfif:","<", $tmp);
     $rep=str_replace("</pfif:","</",$rep);
     $xml=simplexml_load_string($rep);
@@ -62,7 +63,7 @@ class PersonFinderBot {
       $place = new PersonFinderPlace($home_state, $home_city, $home_street);
       $time=date("Y.m.d H:i:s",strtotime($time));
       $address = $place->__toString();
-      $str = sprintf("「%s」さん（%s）を「%s」さんが探しています。 [ %s ] %s #personfinder_anpi", $name, $address, $post, $time, $url);
+      $str = sprintf("「%s」さん（%s）を「%s」さんが探しています。 [ %s ] %s #pf_anpi", $name, $address, $post, $time, $url);
       return array($place, $str);
     }
   }

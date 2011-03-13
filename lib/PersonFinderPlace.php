@@ -22,9 +22,8 @@ class PersonFinderPlace {
    *
    */
   private $cities  = array(
-    "山田" => "山田|yamada",
-    //"気仙沼" => "気仙沼|kesennuma",
-    //"仙台" => "仙台|sendai",
+    "岩手" => "山田|yamada",
+    "宮城" => "仙台|sendai|気仙沼|kesennuma",
   );
 
 
