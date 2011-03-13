@@ -84,7 +84,7 @@ class PersonFinderBot {
       $str = sprintf("「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
       $str_len = mb_strlen($str,"UTF-8");
       if($str_len > 140){
-        $cut_len = 140 - $str_len;
+        $cut_len = $str_len - 140;
         $description_len = mb_strlen($description,"UTF-8");
         $cut_description_len = $description_len - $cut_len - 1;
         $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
