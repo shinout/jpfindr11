@@ -93,8 +93,7 @@ switch ($state) {
 	//Topページへ戻る
 
   $_SESSION['oauth_state'] = $state = 'request';
-  echo  '<p><a href="/?test=clear">BACK TO TOP</a></p>';
-	//header("Location: /");
+  echo  '<p><a href="/register.php?test=clear">BACK TO TOP</a></p>';
 
 }
 

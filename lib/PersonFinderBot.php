@@ -165,9 +165,11 @@ class PersonFinderBot {
   protected function tweet($place, $str) {
     $twitter_region_name = $place->getTwitterKey();
 
+
     $tokens = $this->loadTokens();
     $token  = $tokens[$twitter_region_name];
 
+    $this->l("twitter region name::".$twitter_region_name);
     $this->l("token[akey]:".$token["akey"]);
     $this->l("token[asec]:".$token["asec"]);
     if (mb_strlen($str, "UTF-8") > 140 ) {

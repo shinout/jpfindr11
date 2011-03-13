@@ -16,22 +16,14 @@ class PersonFinderPlace {
     "長野" => "長野|nagano",
   );
 
-  /**
-   *
-   *Twitter地域名と市町村名正規表現のペア
-   *
-   */
-  private $cities  = array(
-    "岩手" => "山田|yamada",
-    "宮城" => "仙台|sendai|気仙沼|kesennuma",
-  );
-
-
   private $streets = array(); // 未登録です
 
   private $state   = "";
   private $city    = "";
   private $street  = "";
+
+  private $cities_filename = "/../data/cities";
+  private $cities = array();
 
   public function __construct($home_state, $home_city, $home_street) {
     $this->state   = trim($home_state);
@@ -45,6 +37,62 @@ class PersonFinderPlace {
                   ? self::NO_ADDRESS
                   : trim ( $this->state." ".$this->city." ".$this->street);
 
+  }
+
+  /**
+   *
+   *市町村名からTwitter地域名のペアをかえす
+   *
+   */
+  private function getStateByCity($city) {
+    $this->loadCitiesFile();
+    if (isset($this->cities[$city])) {
+      return $this->cities[$city];
+    }
+    else {
+      return false;
+    }
+  }
+
+  /**
+   *
+   *市町村名とその正規表現のペア
+   *
+   */
+  private function getCityExps() {
+    $ret = array();
+    $this->loadCitiesFile();
+    foreach (array_keys($this->cities) as $city) {
+      $ret[$city] = preg_quote($city);
+    }
+    return $ret;
+  }
+
+  /**
+   * 市町村データファイルの読み込み
+   */
+  private function loadCitiesFile() {
+    if (empty($this->cities)) {
+      $script_dir = dirname(__FILE__);
+      $path = $script_dir.$this->cities_filename;
+      $lines = file($path);
+
+      $arr   = array();
+      $state = "";
+      foreach ($lines as $line) {
+        if ( trim($line) == "") 
+          continue;
+        // 県名
+        if (preg_match("/\[(.*)\]/", $line, $matched)) {
+          $state = $matched[1];
+        } 
+        // 市町村名
+        else {
+          $arr[trim($line)] = $state;
+        }
+      }
+      $this->cities = $arr;
+    }
   }
 
   /*
@@ -78,14 +126,11 @@ class PersonFinderPlace {
     return false;
   }
 
-
-
-
   /* City情報からTwitter地域名を取得 */
   private function getTwitterKeyByCity() {
-    foreach ($this->cities as $name => $city) {
-      if ( preg_match("/".$city."/", strtolower($this->city)) ) {
-        return $name;
+    foreach ($this->getCityExps() as $name => $city) {
+      if ( preg_match("/".$city."/", strtolower($this->__toString()))) {
+        return $this->getStateByCity($name);
       }
     }
     return false;

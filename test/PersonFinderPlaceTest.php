@@ -8,10 +8,8 @@ $pfp1 = new PersonFinderPlace("岩手", "山田", "大沢");
   l("岩手山田大沢の__toString");
   var_dump( $pfp1->__toString() == "岩手 山田 大沢");
 
-  l("岩手山田大沢のTwitterKeyは 山田 である");
-  var_dump( $pfp1->getTwitterKey() == "山田");
-
-
+  l("岩手山田大沢のTwitterKeyは 岩手 である");
+  var_dump( $pfp1->getTwitterKey() == "岩手");
 
 
 $pfp2 = new PersonFinderPlace("青森県", "", "");
@@ -51,3 +49,25 @@ $pfp5 = new PersonFinderPlace("", "", "");
   l("無名のTwitterKeyは その他 である");
   var_dump( $pfp5->getTwitterKey());
   var_dump( $pfp5->getTwitterKey() == "その他");
+
+
+$pfp6 = new PersonFinderPlace("", "仙台市", "");
+  l("仙台 => 宮城");
+  var_dump( $pfp6->getTwitterKey() == "宮城");
+
+$pfp = new PersonFinderPlace("", "つくばみらい市", "");
+  l("つくばみらい");
+  var_dump( $pfp->getTwitterKey() == "茨城");
+
+$pfp = new PersonFinderPlace("仙台市", "", "");
+  l("仙台市 in state");
+  var_dump( $pfp->getTwitterKey() == "宮城");
+
+$pfp = new PersonFinderPlace("陸前高田市", "", "");
+  l("陸前高田市 in state");
+  var_dump( $pfp->getTwitterKey() == "岩手");
+
+$pfp = new PersonFinderPlace("", "", "陸前高田市");
+  l("陸前高田市 in street");
+  var_dump( $pfp->getTwitterKey() == "岩手");
+
