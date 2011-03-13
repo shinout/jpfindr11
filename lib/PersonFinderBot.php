@@ -31,10 +31,11 @@ class PersonFinderBot {
   /*
    * param1: $state : "岩手", "青森", などのあれをいれましょう。
    * param2: $str   : つぶやきたい文字をいれましょう。140字以内です。もちろん。
+   * param3: $test  : 実際にはつぶやかないでテストだけするときのオプション。
    */
-  public function tweetString($state, $str) {
+  public function tweetString($state, $str, $test=false) {
     $place = new PersonFinderPlace($state, "", "");
-    $this->tweet($place, $str);
+    $this->tweet($place, $str, $test);
   }
 
   /* XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す */
@@ -171,7 +172,7 @@ class PersonFinderBot {
   }
 
   /* ツイートする */
-  protected function tweet($place, $str) {
+  protected function tweet($place, $str, $test=false) {
     $twitter_region_name = $place->getTwitterKey();
 
 
@@ -183,6 +184,11 @@ class PersonFinderBot {
     $this->l("token[asec]:".$token["asec"]);
     if (mb_strlen($str, "UTF-8") > 140 ) {
       $str = mb_substr($str,0,140, "UTF-8");
+    }
+
+    if ($test) {
+      $this->l("tweet test finished. str: ". $str);
+      return;
     }
 
     $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));

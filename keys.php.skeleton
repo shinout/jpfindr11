@@ -2,4 +2,6 @@
 define("TWITTER_CKEY", "");
 define("TWITTER_CSEC", "");
 define("PERSONFINDER_KEY", "");
+define("WEB_KEY1", "");
+define("WEB_KEY2", "");
 
