@@ -8,6 +8,7 @@ require("${script_dir}/PersonFinderPlace.php");
 class PersonFinderBot {
   private $token_filename = "tokens.tsv";
   private $bitly_filename = "bitlys.tsv";
+  private $tweeted_filename = "tweeted";
 
   /* ログを出力 */
   public function l($str) { echo $str."\n"; }
@@ -36,10 +37,17 @@ class PersonFinderBot {
     $rep=str_replace("</pfif:","</",$rep);
     $xml=simplexml_load_string($rep);
     foreach ($xml->entry as $v) {
+      $uri =(string)$v->id;
+
+      // あるかどうかチェック
+      if ( $this->hasTweeted($uri) ) {
+        $this->l("URL: $uri was already tweeted. Skipping this node.");
+        continue;
+      }
+
       $name=(string)$v->title;
       $time=(string)$v->updated;
       $post=(string)$v->author->name;
-      $uri =(string)$v->id;
       $home_state=(string)$v->person->home_state;
       $home_city=(string)$v->person->home_city;
       $home_street=(string)$v->person->home_street;
@@ -76,6 +84,36 @@ class PersonFinderBot {
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
+  }
+
+  protected function hasTweeted($uri) {
+    $uri = trim($uri);
+    $script_dir = dirname(__FILE__);
+    $path = $script_dir."/../tmp/".$this->tweeted_filename;
+    if (!is_file($path)) {
+      //touch($path, 0666);
+      touch($path);
+    }
+    $uris = file($path);
+    if (in_array($uri, $uris)) {
+      return true;
+    }
+    $uris[] = $uri;
+    if ( count($uris) > 100 ) {
+      array_shift($uris);
+    }
+
+    //file_put_contents($path, implode("\n",$uris));
+
+    $put = "";
+    foreach ($uris as $uri) {
+      if (trim($uri) == "")
+        continue;
+      $put .= trim($uri)."\n";
+    }
+    file_put_contents($path, $put);
+
+    return false;
   }
 
   /* BitLyのアカウントのいずれかを取得 */
