@@ -36,6 +36,8 @@ class PersonFinderBot {
       $home_state=(string)$v->person->home_state;
       $home_city=(string)$v->person->home_city;
       $home_street=(string)$v->person->home_street;
+      $description=(string)$v->person->other;
+      $description=str_replace("description:","",$description);
       if(preg_match("/ /",$name)){
         $name=explode(" ",$name);
         $name=$name[1]." ".$name[0];
@@ -61,9 +63,9 @@ class PersonFinderBot {
         $url = $uri;
       }
       $place = new PersonFinderPlace($home_state, $home_city, $home_street);
-      $time=date("Y.m.d H:i:s",strtotime($time));
+      $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
-      $str = sprintf("「%s」さん（%s）を「%s」さんが探しています。 [ %s ] %s #pf_anpi", $name, $address, $post, $time, $url);
+      $str = sprintf("「%s」さん（%s）を探しています。%s。by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
       return array($place, $str);
     }
   }
