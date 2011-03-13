@@ -70,7 +70,7 @@ class PersonFinderBot {
       while (substr($url,0,5) == "ERROR" && $counter < 5) {
         $this->l("getting from bit.ly: failed. $counter time.");
         //$url=bitly($uri, $bitly_user, $bitly_key );
-        $url=$uri;
+        $url = $uri;
         $counter++;
       }
       $this->l("Final URL from bit.ly: ".$url);
@@ -162,6 +162,9 @@ class PersonFinderBot {
 
     $this->l("token[akey]:".$token["akey"]);
     $this->l("token[asec]:".$token["asec"]);
+    if (mb_strlen($str, "UTF-8") > 140 ) {
+      $str = mb_substr($str,0,140, "UTF-8");
+    }
 
     $to=new TwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
     $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
