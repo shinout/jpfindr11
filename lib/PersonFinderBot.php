@@ -82,6 +82,14 @@ class PersonFinderBot {
       $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
       $str = sprintf("「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
+      $str_len = mb_strlen($str,"UTF-8");
+      if($str_len > 140){
+        $cut_len = 140 - $str_len;
+        $description_len = mb_strlen($description,"UTF-8");
+        $cut_description_len = $description_len - $cut_len - 1;
+        $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+        $str = sprintf("「%s」さん（%s）を探しています。%s… by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
+      }
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
