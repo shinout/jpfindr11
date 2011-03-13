@@ -69,7 +69,8 @@ class PersonFinderBot {
       $counter = 1;
       while (substr($url,0,5) == "ERROR" && $counter < 5) {
         $this->l("getting from bit.ly: failed. $counter time.");
-        $url=bitly($uri, $bitly_user, $bitly_key );
+        //$url=bitly($uri, $bitly_user, $bitly_key );
+        $url=$uri;
         $counter++;
       }
       $this->l("Final URL from bit.ly: ".$url);
@@ -95,7 +96,7 @@ class PersonFinderBot {
       touch($path);
     }
     $uris = file($path);
-    if (in_array($uri, $uris)) {
+    if (in_array($uri."\n", $uris)) {
       return true;
     }
     $uris[] = $uri;
