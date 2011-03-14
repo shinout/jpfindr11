@@ -86,6 +86,21 @@ class PersonFinderBot {
         $post=explode(" ",$post);
         $post=$post[1]." ".$post[0];
       }
+	  print $name . $time;
+      
+	  $english=false;
+	  	  
+	  //全部英語かどうか
+      if(preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$name)
+	     && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$post)
+         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_state)
+         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_city)
+         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_street)
+         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$description)){
+        $english=true;
+		print "\nthis is english\n";
+      }
+	  
       $uri=explode("/",$uri);
       $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1];
 
@@ -106,27 +121,55 @@ class PersonFinderBot {
       $place = new PersonFinderPlace($home_state, $home_city, $home_street);
       $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
-
+	  
       // alivedかどうかチェック
       if ( (string)$v->person->note->status == "believed_alive" ) {
         $this->l(sprintf("person: %s was believed alive.", (string)$v->title));
-        $str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
+		if($english==false) {
+        	$str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
+		}
+		else {
+			$str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
+			$str_e = $this->getEnglishText("alived", $name, $address, $description, $post, $time, $url);
+		}
       }
 
       // selfかどうかチェック
       elseif ( (string)$v->person->note->status == "is_note_author" ) {
         $this->l(sprintf("person: %s was reporting about him/herself.", (string)$v->author->name));
-        $str = $this->getText("self", $name, $address, $description, $post, $time, $url);
+		if($english==false) {
+        	$str = $this->getText("self", $name, $address, $description, $post, $time, $url);
+		}
+		else {
+			$str = $this->getText("self", $name, $address, $description, $post, $time, $url);
+			$str_e = $this->getEnglishText("self", $name, $address, $description, $post, $time, $url);
+		}
       }
       // deadかどうかチェック
       elseif ( (string)$v->person->note->status == "believed_dead" ) {
         $this->l(sprintf("person: %s was believed dead.", (string)$v->author->name));
-        $str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
+		if($english==false) {
+        	$str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
+		}
+		else {
+			$str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
+			$str_e = $this->getEnglishText("dead", $name, $address, $description, $post, $time, $url);
+		}
       }
       else {
-        $str = $this->getText("search", $name, $address, $description, $post, $time, $url);
+		if($english==false) {
+        	$str = $this->getText("search", $name, $address, $description, $post, $time, $url);
+		}
+		else {
+			$str = $this->getText("search", $name, $address, $description, $post, $time, $url);
+			$str_e = $this->getEnglishText("search", $name, $address, $description, $post, $time, $url);
+		}
       }
 
+      if($english==true) {
+		  $this->tweetEnglish($str_e);
+	  }
+	  
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
@@ -146,7 +189,7 @@ class PersonFinderBot {
         $template = "「%s」さん（%s）の生存が確認されたようです。%s by %s [ %s ] %s #pf_anpi";
         break;
       case "dead":
-        $template = "「%s」さん（%s）は死亡している可能性があります。%s by %s [ %s ] %s #pf_anpi";
+        $template = "「%s」さん（%s）はお亡くなりになった可能性があります。%s by %s [ %s ] %s #pf_anpi";
         break;
     }
     $str = sprintf($template, $name, $address, $description, $post, $time, $url);
@@ -157,6 +200,64 @@ class PersonFinderBot {
       $cut_description_len = $description_len - $cut_len - 1;
       $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
       $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
+    }
+    //trigger_error($str);
+    return $str;
+  }
+  
+  protected function getEnglishText($type, $name, $address, $description, $post, $time, $url) {
+	if(strcmp($address,"住所未記入")==0){$address="none";}
+    $str = "";
+    switch ($type) {
+      case "search":
+      default:
+		$template = "%s（%s）Help find this missing person. %s by %s [ %s ] %s #pf_anpi";
+		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
+    	$str_len = mb_strlen($str,"UTF-8");
+    	if($str_len > 140){
+    	  $cut_len = $str_len - 140;
+    	  $description_len = mb_strlen($description,"UTF-8");
+    	  $cut_description_len = $description_len - $cut_len - 1;
+    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
+ 	   	}
+        break;
+      case "self":
+        $template = "%s is surviving confirmed by him/herself. (%s) %s by %s [ %s ] %s #pf_anpi";
+		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
+    	$str_len = mb_strlen($str,"UTF-8");
+    	if($str_len > 140){
+    	  $cut_len = $str_len - 140;
+    	  $description_len = mb_strlen($description,"UTF-8");
+    	  $cut_description_len = $description_len - $cut_len - 1;
+    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
+    	}
+        break;
+      case "alived":
+        $template = "%s is surviving confirmed by %s. (%s) %s [ %s ] %s #pf_anpi";
+		$str = sprintf($template, $name, $post, $address, $description, $time, $url);
+    	$str_len = mb_strlen($str,"UTF-8");
+    	if($str_len > 140){
+    	  $cut_len = $str_len - 140;
+    	  $description_len = mb_strlen($description,"UTF-8");
+    	  $cut_description_len = $description_len - $cut_len - 1;
+    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+    	  $str = sprintf($template, $name, $post, $address, $description."…", $time, $url);
+    	}
+        break;
+      case "dead":
+        $template = "%s : Possibility of being perished. (%s) %s by %s [ %s ] %s #pf_anpi";
+		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
+    	$str_len = mb_strlen($str,"UTF-8");
+    	if($str_len > 140){
+    	  $cut_len = $str_len - 140;
+    	  $description_len = mb_strlen($description,"UTF-8");
+    	  $cut_description_len = $description_len - $cut_len - 1;
+    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
+    	}
+        break;
     }
     //trigger_error($str);
     return $str;
@@ -229,9 +330,35 @@ class PersonFinderBot {
   }
 
   /* ツイートする */
-  protected function tweet($place, $str, $test=false) {
+  protected function tweet($place, $str, $test=true) {
     $twitter_region_name = $place->getTwitterKey();
 
+
+    $tokens = $this->loadTokens();
+    $token  = $tokens[$twitter_region_name];
+
+    $this->l("twitter region name::".$twitter_region_name);
+    $this->l("token[akey]:".$token["akey"]);
+    $this->l("token[asec]:".$token["asec"]);
+    if (mb_strlen($str, "UTF-8") > 140 ) {
+      $str = mb_substr($str,0,140, "UTF-8");
+    }
+
+    if ($test) {
+      $this->l("tweet test finished. str: ". $str);
+      return;
+    }
+
+    $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
+    $result = $to->OAuthRequest("http://twitter.com/statuses/update.json","POST",array("status"=>$str));
+    $this->l("tweet request. result in detail is as follows.");
+    $this->parseResult($result);
+
+  }
+  
+  protected function tweetEnglish($str, $test=false) {
+	print "tweet in english\n";
+    $twitter_region_name = "英語";
 
     $tokens = $this->loadTokens();
     $token  = $tokens[$twitter_region_name];
