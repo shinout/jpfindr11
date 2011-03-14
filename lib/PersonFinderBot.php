@@ -4,11 +4,14 @@ require("${script_dir}/../keys.php"); // make your own key file.
 require("${script_dir}/PersonFinderTwitterOAuth.php");
 require("${script_dir}/libfnc-bitly.php");
 require("${script_dir}/PersonFinderPlace.php");
+require("${script_dir}/PersonFinderDTO.php");
 
 class PersonFinderBot {
-  private $token_filename = "tokens.tsv";
-  private $bitly_filename = "bitlys.tsv";
-  private $tweeted_filename = "tweeted";
+  private $token_filename = "/../data/tokens.tsv";
+  private $bitly_filename = "/../data/bitlys.tsv";
+  private $tweeted_filename = "/../tmp/tweeted";
+  private $tokens;
+  private $test = false;
 
   /* ログを出力 */
   public function l($str, $e=false) { 
@@ -18,10 +21,20 @@ class PersonFinderBot {
     }
   }
 
-  /* PersonFinderのXMLを取得してツイートします */
-  public function tweetXMLData($test=false) {
+  /**
+   * $pfb->setTest(); // testモード(実際はつぶやかない）
+   * $pfb->setTest(false); // 本番モード
+   */ 
+  public function setTest($test=true) {
+    $this->test = $test;
+  }
 
-    $parsed_arr = $this->parseXML();
+  /**
+   * PersonFinderのXMLを取得してツイートします 
+   */
+  public function tweetXMLData($test=false) {
+    $this->test = $test;
+    $parsed_arr = $this->parseXML(true);
     $this->l("XML was parsed.");
     $this->l("got ".count($parsed_arr)." data from the XML.");
     foreach ($parsed_arr as $i=>$parsed) {
@@ -30,7 +43,7 @@ class PersonFinderBot {
       list($place, $str) = $parsed;
       $this->l("str: ".$str);
       $this->l("place: ".$place->__toString());
-      $this->tweet($place, $str, $test);
+      $this->tweet($this->getTokenByPlace($place), $str);
     }
 
     // wait処理
@@ -41,232 +54,172 @@ class PersonFinderBot {
     }
   }
 
-  /*
+  /**
    * param1: $state : "岩手", "青森", などのあれをいれましょう。
    * param2: $str   : つぶやきたい文字をいれましょう。140字以内です。もちろん。
    * param3: $test  : 実際にはつぶやかないでテストだけするときのオプション。
    */
   public function tweetString($state, $str, $test=false) {
-    $place = new PersonFinderPlace($state, "", "");
-    $this->tweet($place, $str, $test);
+    $this->test = $test;
+    $this->tweet($this->getTokenByName($state), $str);
   }
 
-  /* XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す */
-  protected function parseXML() {
+  /**
+   * XMLをパースして、位置情報(PersonFinderPlaceオブジェクト)とツイート文字列を返す 
+   */
+  protected function parseXML($tweet_english = true) {
     $parsed_arr = array();
     $tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person?key=".PERSONFINDER_KEY);
-    //$tmp=file_get_contents("https://japan.person-finder.appspot.com/feeds/person");
     $rep=str_replace("<pfif:","<", $tmp);
     $rep=str_replace("</pfif:","</",$rep);
     $xml=simplexml_load_string($rep);
-    foreach ($xml->entry as $v) {
-      $uri =(string)$v->id;
 
-      // あるかどうかチェック
-      if ( $this->hasTweeted($uri) ) {
-        $this->l("URL: $uri was already tweeted. Skipping this node.");
+    foreach ($xml->entry as $v) {
+
+      // すでにあるかどうかチェック
+      if ( $this->hasTweeted($v->id) ) {
+        $this->l("URL: ".$v->id." was already tweeted. Skipping this node.");
         continue;
       }
 
-      $this->l("note.status : ".(string)$v->person->note->status);
+      // パースされたデータオブジェクトを生成
+      $pfdata = PersonFinderDTO::createFromXML($v);
 
-      $name=(string)$v->title;
-      $time=(string)$v->updated;
-      $post=(string)$v->author->name;
-      $home_state=(string)$v->person->home_state;
-      $home_city=(string)$v->person->home_city;
-      $home_street=(string)$v->person->home_street;
-      $description=(string)$v->person->other;
-      $description=str_replace("description:","",$description);
-      if(preg_match("/ /",$name)){
-        $name=explode(" ",$name);
-        $name=$name[1]." ".$name[0];
+      // URLを短くする
+      $pfdata->uri = $this->getShortenURL($pfdata->uri);
+
+      // 場所データオブジェクトを生成
+      $place = $this->getPlace($pfdata);
+
+      // つぶやき文字列を生成
+      $str = $this->getText($pfdata, $place);
+
+      // 英語であれば英語用ツイート
+      if ($tweet_english && $pfdata->isEnglish()) {
+        $this->tweet($this->getTokenByName("英語"), $this->getEnglishText($pfdata, $place));
       }
-      if(preg_match("/ /",$post)){
-        $post=explode(" ",$post);
-        $post=$post[1]." ".$post[0];
-      }
-	  print $name . $time;
       
-	  $english=false;
-	  	  
-	  //全部英語かどうか
-      if(preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$name)
-	     && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$post)
-         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_state)
-         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_city)
-         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$home_street)
-         && preg_match("/^[a-zA-Z0-9,\.\s]*$/s",$description)){
-        $english=true;
-		print "\nthis is english\n";
-      }
-	  
-      $uri=explode("/",$uri);
-      $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1];
-
-      list($bitly_user, $bitly_key) = $this->getBitLy();
-      $url = bitly($uri, $bitly_user, $bitly_key );
-      $counter = 1;
-      while (substr($url,0,5) == "ERROR" && $counter < 5) {
-        $this->l("getting from bit.ly: failed. $counter time.");
-        //$url=bitly($uri, $bitly_user, $bitly_key );
-        $url = $uri;
-        $counter++;
-      }
-      $this->l("Final URL from bit.ly: ".$url);
-      if (substr($url,0,5) == "ERROR") {
-        $this->l("Could't get shorten URL from bit.ly, then use original one.");
-        $url = $uri;
-      }
-      $place = new PersonFinderPlace($home_state, $home_city, $home_street);
-      $time=date("m/d H:i",strtotime($time));
-      $address = $place->__toString();
-	  
-      // alivedかどうかチェック
-      if ( (string)$v->person->note->status == "believed_alive" ) {
-        $this->l(sprintf("person: %s was believed alive.", (string)$v->title));
-		if($english==false) {
-        	$str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
-		}
-		else {
-			$str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
-			$str_e = $this->getEnglishText("alived", $name, $address, $description, $post, $time, $url);
-		}
-      }
-
-      // selfかどうかチェック
-      elseif ( (string)$v->person->note->status == "is_note_author" ) {
-        $this->l(sprintf("person: %s was reporting about him/herself.", (string)$v->author->name));
-		if($english==false) {
-        	$str = $this->getText("self", $name, $address, $description, $post, $time, $url);
-		}
-		else {
-			$str = $this->getText("self", $name, $address, $description, $post, $time, $url);
-			$str_e = $this->getEnglishText("self", $name, $address, $description, $post, $time, $url);
-		}
-      }
-      // deadかどうかチェック
-      elseif ( (string)$v->person->note->status == "believed_dead" ) {
-        $this->l(sprintf("person: %s was believed dead.", (string)$v->author->name));
-		if($english==false) {
-        	$str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
-		}
-		else {
-			$str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
-			$str_e = $this->getEnglishText("dead", $name, $address, $description, $post, $time, $url);
-		}
-      }
-      else {
-		if($english==false) {
-        	$str = $this->getText("search", $name, $address, $description, $post, $time, $url);
-		}
-		else {
-			$str = $this->getText("search", $name, $address, $description, $post, $time, $url);
-			$str_e = $this->getEnglishText("search", $name, $address, $description, $post, $time, $url);
-		}
-      }
-
-      if($english==true) {
-		  $this->tweetEnglish($str_e);
-	  }
-	  
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
   }
 
-  protected function getText($type, $name, $address, $description, $post, $time, $url) {
+  /**
+   * 取得したデータオブジェクトから場所情報オブジェクトを作成
+   */
+  protected function getPlace($pfdata) {
+    return new PersonFinderPlace($pfdata->home_state, $pfdata->home_city, $pfdata->home_street);
+  }
+
+  /**
+   * bit.lyを使ってURLを短くする.
+   */
+  private function getShortenURL($uri) {
+    $uri=explode("/",$uri);
+    $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1];
+
+    // read account data from file
+    $script_dir = dirname(__FILE__);
+    $lines = file($script_dir.$this->bitly_filename);
+    foreach ($lines as $line) {
+      if ( substr($line,0,1) == "#")
+        continue;
+
+      $linearr = preg_split("/\t/", $line);
+      if ( count($linearr) > 1) {
+        $bitlys[] = $linearr;
+      }
+    }
+    list($bitly_user, $bitly_key) = $bitlys[array_rand( $bitlys )];
+    $url = bitly($uri, $bitly_user, $bitly_key);
+    $this->l("URL from bit.ly: ".$url);
+    if (substr($url,0,5) == "ERROR") {
+      $this->l("Could't get shorten URL from bit.ly, then use original one.", true);
+      $url = $uri;
+    }
+    return $url;
+  }
+    
+  /**
+   * 取得したデータと場所情報からツイートする文章を作成
+   */
+  protected function getText($pfdata, $place) {
     $str = "";
-    switch ($type) {
-      case "search":
+    switch ($pfdata->status) {
       default:
-        $template = "「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi";
+        $template = sprintf("「%s」さん（%s）を探しています。<<DESC>> by %s [ %s ] %s #pf_anpi",
+                              $pfdata->name, $place->__toString(), $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
-      case "self":
-        $template = "「%s」さん（%s）本人より生存報告です。%s by %s [ %s ] %s #pf_anpi";
+      case "is_note_author":
+        $template = sprintf("「%s」さん（%s）本人より生存報告です。<<DESC>> by %s [ %s ] %s #pf_anpi", 
+                              $pfdata->name, $place->__toString(), $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
-      case "alived":
-        $template = "「%s」さん（%s）の生存が確認されたようです。%s by %s [ %s ] %s #pf_anpi";
+      case "believed_alive":
+        $template = sprintf("「%s」さん（%s）の生存が確認されたようです。<<DESC>> by %s [ %s ] %s #pf_anpi",
+                              $pfdata->name, $place->__toString(), $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
-      case "dead":
-        $template = "「%s」さん（%s）はお亡くなりになった可能性があります。%s by %s [ %s ] %s #pf_anpi";
+      case "believed_dead":
+        $template = sprintf("「%s」さん（%s）はお亡くなりになった可能性があります。<<DESC>> by %s [ %s ] %s #pf_anpi", 
+                              $pfdata->name, $place->__toString(), $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
     }
-    $str = sprintf($template, $name, $address, $description, $post, $time, $url);
-    $str_len = mb_strlen($str,"UTF-8");
-    if($str_len > 140){
-      $cut_len = $str_len - 140;
-      $description_len = mb_strlen($description,"UTF-8");
-      $cut_description_len = $description_len - $cut_len - 1;
-      $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-      $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
-    }
-    //trigger_error($str);
-    return $str;
+
+    return $this->cutDescription($str, $pfdata->description, $template);
+
   }
   
-  protected function getEnglishText($type, $name, $address, $description, $post, $time, $url) {
-	if(strcmp($address,"住所未記入")==0){$address="none";}
+  /**
+   * 取得したデータと場所情報からツイートする文章を英語で作成
+   */
+  protected function getEnglishText($pfdata, $place) {
+    $address = ($place->__toString() == PersonFinderPlace::NO_ADDRESS) 
+      ? "none"
+      : $place->__toString();
+
     $str = "";
-    switch ($type) {
-      case "search":
+
+    switch ($pfdata->status) {
       default:
-		$template = "%s（%s）Help find this missing person. %s by %s [ %s ] %s #pf_anpi";
-		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
-    	$str_len = mb_strlen($str,"UTF-8");
-    	if($str_len > 140){
-    	  $cut_len = $str_len - 140;
-    	  $description_len = mb_strlen($description,"UTF-8");
-    	  $cut_description_len = $description_len - $cut_len - 1;
-    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
- 	   	}
+        $template = sprintf("%s（%s）Help find this missing person. <<DESC>> by %s [ %s ] %s #pf_anpi",
+                              $pfdata->name, $address, $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
-      case "self":
-        $template = "%s is surviving confirmed by him/herself. (%s) %s by %s [ %s ] %s #pf_anpi";
-		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
-    	$str_len = mb_strlen($str,"UTF-8");
-    	if($str_len > 140){
-    	  $cut_len = $str_len - 140;
-    	  $description_len = mb_strlen($description,"UTF-8");
-    	  $cut_description_len = $description_len - $cut_len - 1;
-    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
-    	}
+      case "is_note_author":
+        $template = sprintf("%s is surviving confirmed by him/herself. (%s) <<DESC>> [ %s ] %s #pf_anpi",
+                              $pfdata->name, $address, $pfdata->time, $pfdata->uri);
         break;
-      case "alived":
-        $template = "%s is surviving confirmed by %s. (%s) %s [ %s ] %s #pf_anpi";
-		$str = sprintf($template, $name, $post, $address, $description, $time, $url);
-    	$str_len = mb_strlen($str,"UTF-8");
-    	if($str_len > 140){
-    	  $cut_len = $str_len - 140;
-    	  $description_len = mb_strlen($description,"UTF-8");
-    	  $cut_description_len = $description_len - $cut_len - 1;
-    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-    	  $str = sprintf($template, $name, $post, $address, $description."…", $time, $url);
-    	}
+      case "believed_alive":
+        $template = sprintf("%s is surviving confirmed by %s. (%s) <<DESC>> [ %s ] %s #pf_anpi",
+                              $pfdata->name, $pfdata->post, $address, $pfdata->time, $pfdata->uri);
         break;
-      case "dead":
-        $template = "%s : Possibility of being perished. (%s) %s by %s [ %s ] %s #pf_anpi";
-		$str = sprintf($template, $name, $address, $description, $post, $time, $url);
-    	$str_len = mb_strlen($str,"UTF-8");
-    	if($str_len > 140){
-    	  $cut_len = $str_len - 140;
-    	  $description_len = mb_strlen($description,"UTF-8");
-    	  $cut_description_len = $description_len - $cut_len - 1;
-    	  $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-    	  $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
-    	}
+      case "believed_dead":
+        $template = sprintf("%s : Possibility of being perished. (%s) <<DESC>> by %s [ %s ] %s #pf_anpi",
+                              $pfdata->name, $address, $pfdata->post, $pfdata->time, $pfdata->uri);
         break;
     }
-    //trigger_error($str);
+    return $this->cutDescription($str, $pfdata->description, $template);
+  }
+
+  /**
+   * 詳細が長過ぎる場合に140文字までカットして返す
+   */
+  private function cutDescription($str, $description, $template) {
+    $str = str_replace("<<DESC>>", $description, $template);
+    $cut_len = mb_strlen($str,"UTF-8") - 140;
+    if ($cut_len > 0) {
+      $cut_desc_len = mb_strlen($description,"UTF-8") - $cut_len - 1;
+      $description = mb_substr($description, 0, $cut_desc_len, "UTF-8");
+      $str = str_replace("<<DESC>>", $description."…", $template);
+    }
     return $str;
   }
 
+  /**
+   * すでにツイートされているかどうか
+   */
   protected function hasTweeted($uri) {
     $uri = trim($uri);
     $script_dir = dirname(__FILE__);
-    $path = $script_dir."/../tmp/".$this->tweeted_filename;
+    $path = $script_dir. $this->tweeted_filename;
     if (!is_file($path)) {
       //touch($path, 0666);
       touch($path);
@@ -293,58 +246,58 @@ class PersonFinderBot {
     return false;
   }
 
-  /* BitLyのアカウントのいずれかを取得 */
-  protected function getBitLy() {
-    $bitlys = array();
-    $script_dir = dirname(__FILE__);
-    $lines = file($script_dir."/../".$this->bitly_filename);
-    foreach ($lines as $line) {
-      if ( substr($line,0,1) == "#")
-        continue;
 
-      $linearr = preg_split("/\t/", $line);
-      if ( count($linearr) > 1) {
-        $bitlys[] = $linearr;
-      }
-    }
-    return $bitlys[array_rand( $bitlys )];
-    //return array(BITLY_USERNAME, BITLY_APIKEY);
+  /**
+   * PlaceオブジェクトからTwitterアカウントのトークンを取得
+   */
+  protected function getTokenByPlace($place) {
+    return $this->getTokenByName($place->getTwitterKey());
   }
- 
-  /* Twitterアカウントのトークンを読み込む */
+
+  /**
+   * "岩手", "宮城" といった名称からTwitterアカウントのトークンを取得
+   */
+  protected function getTokenByName($twitter_region_name) {
+    $this->l("twitter region name: ".$twitter_region_name);
+    $this->loadTokens();
+    return $this->tokens[$twitter_region_name];
+  }
+
+
+  /**
+   * Twitterアカウントのトークンを読み込む 
+   */
   protected function loadTokens() {
-    $tokens = array();
-    $script_dir = dirname(__FILE__);
-    $lines = file($script_dir."/../".$this->token_filename);
-    foreach ($lines as $line) {
-      if ( substr($line,0,1) == "#")
-        continue;
+    if ( !isset($this->tokens) ) {
+      $tokens = array();
+      $script_dir = dirname(__FILE__);
+      $lines = file($script_dir. $this->token_filename);
+      foreach ($lines as $line) {
+        if ( substr($line,0,1) == "#")
+          continue;
 
-      $linearr = preg_split("/\t/", $line);
-      $pref = $linearr[0];
-      $akey = $linearr[1];
-      $asec = $linearr[2];
-      $tokens[$pref] = array("akey"=>$akey, "asec"=>$asec);
+        $linearr = preg_split("/\t/", $line);
+        $pref = $linearr[0];
+        $akey = $linearr[1];
+        $asec = $linearr[2];
+        $tokens[$pref] = array("akey"=>$akey, "asec"=>$asec);
+      }
+      $this->tokens = $tokens;
     }
-    return $tokens;
+    return $this->tokens;
   }
 
-  /* ツイートする */
-  protected function tweet($place, $str, $test=true) {
-    $twitter_region_name = $place->getTwitterKey();
-
-
-    $tokens = $this->loadTokens();
-    $token  = $tokens[$twitter_region_name];
-
-    $this->l("twitter region name::".$twitter_region_name);
+  /* 
+   * ツイートする 
+   */
+  protected function tweet($token, $str) {
     $this->l("token[akey]:".$token["akey"]);
     $this->l("token[asec]:".$token["asec"]);
     if (mb_strlen($str, "UTF-8") > 140 ) {
       $str = mb_substr($str,0,140, "UTF-8");
     }
 
-    if ($test) {
+    if ($this->test) {
       $this->l("tweet test finished. str: ". $str);
       return;
     }
@@ -352,37 +305,6 @@ class PersonFinderBot {
     $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
     $result = $to->OAuthRequest("http://twitter.com/statuses/update.json","POST",array("status"=>$str));
     $this->l("tweet request. result in detail is as follows.");
-    $this->parseResult($result);
-
-  }
-  
-  protected function tweetEnglish($str, $test=false) {
-	print "tweet in english\n";
-    $twitter_region_name = "英語";
-
-    $tokens = $this->loadTokens();
-    $token  = $tokens[$twitter_region_name];
-
-    $this->l("twitter region name::".$twitter_region_name);
-    $this->l("token[akey]:".$token["akey"]);
-    $this->l("token[asec]:".$token["asec"]);
-    if (mb_strlen($str, "UTF-8") > 140 ) {
-      $str = mb_substr($str,0,140, "UTF-8");
-    }
-
-    if ($test) {
-      $this->l("tweet test finished. str: ". $str);
-      return;
-    }
-
-    $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
-    $result = $to->OAuthRequest("http://twitter.com/statuses/update.json","POST",array("status"=>$str));
-    $this->l("tweet request. result in detail is as follows.");
-    $this->parseResult($result);
-
-  }
-
-  protected function parseResult($result) {
     $json=json_decode($result, true);
     if (isset($json["error"])) {
       trigger_error($json["error"]);
