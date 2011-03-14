@@ -11,7 +11,12 @@ class PersonFinderBot {
   private $tweeted_filename = "tweeted";
 
   /* ログを出力 */
-  public function l($str) { echo $str."\n"; }
+  public function l($str, $e=false) { 
+    echo $str."\n";
+    if ($e) {
+      trigger_error($str);
+    }
+  }
 
   /* PersonFinderのXMLを取得してツイートします */
   public function tweetXMLData($test=false) {
@@ -26,6 +31,13 @@ class PersonFinderBot {
       $this->l("str: ".$str);
       $this->l("place: ".$place->__toString());
       $this->tweet($place, $str, $test);
+    }
+
+    // wait処理
+    $cnt = max( 4 - count($parsed_arr),0);
+    if ($cnt) {
+      $this->l("waiting $cnt sec.", true);
+      sleep($cnt);
     }
   }
 
@@ -229,9 +241,19 @@ class PersonFinderBot {
     }
 
     $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
-    $result = $to->OAuthRequest("http://twitter.com/statuses/update.xml","POST",array("status"=>$str));
-    $this->l("tweet request. result in detail is ->". $result);
+    $result = $to->OAuthRequest("http://twitter.com/statuses/update.json","POST",array("status"=>$str));
+    $this->l("tweet request. result in detail is as follows.");
+    $this->parseResult($result);
 
+  }
+
+  protected function parseResult($result) {
+    $json=json_decode($result, true);
+    if (isset($json["error"])) {
+      trigger_error($json["error"]);
+    }
+    $json["user"] = "";
+    print_r($json);
   }
 }
 
