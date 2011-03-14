@@ -113,6 +113,11 @@ class PersonFinderBot {
         $str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
       }
 
+      // selfかどうかチェック
+      elseif ( (string)$v->person->note->status == "is_note_author" ) {
+        $this->l(sprintf("person: %s was reporting about him/herself.", (string)$v->author->name));
+        $str = $this->getText("self", $name, $address, $description, $post, $time, $url);
+      }
       // deadかどうかチェック
       elseif ( (string)$v->person->note->status == "believed_dead" ) {
         $this->l(sprintf("person: %s was believed dead.", (string)$v->author->name));
@@ -133,6 +138,9 @@ class PersonFinderBot {
       case "search":
       default:
         $template = "「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi";
+        break;
+      case "self":
+        $template = "「%s」さん（%s）本人より生存報告です。%s by %s [ %s ] %s #pf_anpi";
         break;
       case "alived":
         $template = "「%s」さん（%s）の生存が確認されたようです。%s by %s [ %s ] %s #pf_anpi";
