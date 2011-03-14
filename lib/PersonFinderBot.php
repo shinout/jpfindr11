@@ -14,7 +14,8 @@ class PersonFinderBot {
   public function l($str) { echo $str."\n"; }
 
   /* PersonFinderのXMLを取得してツイートします */
-  public function tweetXMLData() {
+  public function tweetXMLData($test=false) {
+
     $parsed_arr = $this->parseXML();
     $this->l("XML was parsed.");
     $this->l("got ".count($parsed_arr)." data from the XML.");
@@ -24,7 +25,7 @@ class PersonFinderBot {
       list($place, $str) = $parsed;
       $this->l("str: ".$str);
       $this->l("place: ".$place->__toString());
-      $this->tweet($place, $str);
+      $this->tweet($place, $str, $test);
     }
   }
 
@@ -54,6 +55,8 @@ class PersonFinderBot {
         $this->l("URL: $uri was already tweeted. Skipping this node.");
         continue;
       }
+
+      $this->l("note.status : ".(string)$v->person->note->status);
 
       $name=(string)$v->title;
       $time=(string)$v->updated;
@@ -91,18 +94,52 @@ class PersonFinderBot {
       $place = new PersonFinderPlace($home_state, $home_city, $home_street);
       $time=date("m/d H:i",strtotime($time));
       $address = $place->__toString();
-      $str = sprintf("「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
-      $str_len = mb_strlen($str,"UTF-8");
-      if($str_len > 140){
-        $cut_len = $str_len - 140;
-        $description_len = mb_strlen($description,"UTF-8");
-        $cut_description_len = $description_len - $cut_len - 1;
-        $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
-        $str = sprintf("「%s」さん（%s）を探しています。%s… by %s [ %s ] %s #pf_anpi", $name, $address, $description, $post, $time, $url);
+
+      // alivedかどうかチェック
+      if ( (string)$v->person->note->status == "believed_alive" ) {
+        $this->l(sprintf("person: %s was believed alive.", (string)$v->title));
+        $str = $this->getText("alived", $name, $address, $description, $post, $time, $url);
       }
+
+      // deadかどうかチェック
+      elseif ( (string)$v->person->note->status == "believed_dead" ) {
+        $this->l(sprintf("person: %s was believed dead.", (string)$v->author->name));
+        $str = $this->getText("dead", $name, $address, $description, $post, $time, $url);
+      }
+      else {
+        $str = $this->getText("search", $name, $address, $description, $post, $time, $url);
+      }
+
       $parsed_arr[] = array($place, $str);
     }
     return $parsed_arr;
+  }
+
+  protected function getText($type, $name, $address, $description, $post, $time, $url) {
+    $str = "";
+    switch ($type) {
+      case "search":
+      default:
+        $template = "「%s」さん（%s）を探しています。%s by %s [ %s ] %s #pf_anpi";
+        break;
+      case "alived":
+        $template = "「%s」さん（%s）の生存が確認されたようです。%s by %s [ %s ] %s #pf_anpi";
+        break;
+      case "dead":
+        $template = "「%s」さん（%s）は死亡している可能性があります。%s by %s [ %s ] %s #pf_anpi";
+        break;
+    }
+    $str = sprintf($template, $name, $address, $description, $post, $time, $url);
+    $str_len = mb_strlen($str,"UTF-8");
+    if($str_len > 140){
+      $cut_len = $str_len - 140;
+      $description_len = mb_strlen($description,"UTF-8");
+      $cut_description_len = $description_len - $cut_len - 1;
+      $description = mb_substr($description, 0, $cut_description_len, "UTF-8");
+      $str = sprintf($template, $name, $address, $description."…", $post, $time, $url);
+    }
+    //trigger_error($str);
+    return $str;
   }
 
   protected function hasTweeted($uri) {
