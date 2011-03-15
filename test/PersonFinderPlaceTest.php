@@ -79,3 +79,10 @@ $pfp = new PersonFinderPlace("", "仙台市", "南大野田");
   l("仙台市南大野田");
   var_dump( $pfp->getTwitterKey() == "宮城");
 
+$pfp = new PersonFinderPlace("", "仙台市", "階上");
+  l("仙台市階上");
+  var_dump( $pfp->getTwitterKey() == "宮城");
+
+$pfp = new PersonFinderPlace("青森", "階上", "");
+  l("青森県階上");
+  var_dump( $pfp->getTwitterKey() == "青森");
