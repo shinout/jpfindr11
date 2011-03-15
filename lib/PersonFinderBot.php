@@ -116,7 +116,8 @@ class PersonFinderBot {
    */
   private function getShortenURL($uri) {
     $uri=explode("/",$uri);
-    $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1];
+	$small=urlencode("&small=yes");
+    $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1].$small;
 
     // read account data from file
     $script_dir = dirname(__FILE__);
