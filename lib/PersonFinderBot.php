@@ -40,10 +40,11 @@ class PersonFinderBot {
     foreach ($parsed_arr as $i=>$parsed) {
       $n = $i+1;
       $this->l("------data $n  -------");
-      list($place, $str) = $parsed;
+      list($place, $str, $geo) = $parsed;
       $this->l("str: ".$str);
       $this->l("place: ".$place->__toString());
-      $this->tweet($this->getTokenByPlace($place), $str);
+			$this->l("geo: ".$geo["lat"]." , ".$geo["long"]);
+      $this->tweet($this->getTokenByPlace($place), $str, $geo);
     }
 
     // wait処理
@@ -90,16 +91,19 @@ class PersonFinderBot {
 
       // 場所データオブジェクトを生成
       $place = $this->getPlace($pfdata);
+			
+			// ジオコード生成用の緯度経度
+			$geo = $this->getLatLong($place, $pfdata);
 
       // つぶやき文字列を生成
       $str = $this->getText($pfdata, $place);
 
       // 英語であれば英語用ツイート
       if ($tweet_english && $pfdata->isEnglish()) {
-        $this->tweet($this->getTokenByName("英語"), $this->getEnglishText($pfdata, $place));
+        $this->tweet($this->getTokenByName("英語"), $this->getEnglishText($pfdata, $place), $geo);
       }
       
-      $parsed_arr[] = array($place, $str);
+      $parsed_arr[] = array($place, $str, $geo);
     }
     return $parsed_arr;
   }
@@ -110,13 +114,52 @@ class PersonFinderBot {
   protected function getPlace($pfdata) {
     return new PersonFinderPlace($pfdata->home_state, $pfdata->home_city, $pfdata->home_street);
   }
+	
+	/**
+	 * 取得したデータオブジェクトの場所情報からジオコード取得
+	 */
+	protected function getLatLong($place, $pfdata) {
+		
+		// まずは住所から緯度経度を求める
+		$state  = ereg_replace("/\s/","",$pfdata->home_state);
+		$city   = ereg_replace("/\s/","",$pfdata->home_city);
+		$street = ereg_replace("/\s/","",$pfdata->home_street);
+		$neighb = ereg_replace("/\s/","",$pfdata->home_neighborhood);
+
+		$pdata  = $state." ".$city." ".$street." ".$neighb;
+
+		$params = array (
+			'q'      => $pdata,
+			'key'    => GOOGLEMAP_AKEY,
+			'sensor' => 'false',
+			'output' => 'json',
+		);
+		
+		$url = 'http://maps.google.com/maps/geo?';
+		$results = json_decode(file_get_contents($url.http_build_query($params)));
+		
+		$lat = $results->Placemark[0]->Point->coordinates[1];
+		$long = $results->Placemark[0]->Point->coordinates[0];
+		
+		print "lat: ".$lat."\n";
+		print "long: ".$long."\n";
+		
+		// 求めた緯度経度をtwitterAPIに渡してgeoIDに
+		$geo = array (
+			'lat'  => $lat,
+			'long' => $long,
+		);
+		var_dump($geo);
+		
+		return $geo;
+	}
 
   /**
    * bit.lyを使ってURLを短くする.
    */
   private function getShortenURL($uri) {
     $uri=explode("/",$uri);
-	$small=urlencode("&small=yes");
+		$small=urlencode("&small=yes");
     $uri="http://japan.person-finder.appspot.com/view?id=japan.person-finder.appspot.com/".$uri[1].$small;
 
     // read account data from file
@@ -291,7 +334,7 @@ class PersonFinderBot {
   /* 
    * ツイートする 
    */
-  protected function tweet($token, $str) {
+  protected function tweet($token, $str, $geo) {
     $this->l("token[akey]:".$token["akey"]);
     $this->l("token[asec]:".$token["asec"]);
     if (mb_strlen($str, "UTF-8") > 140 ) {
@@ -302,9 +345,9 @@ class PersonFinderBot {
       $this->l("tweet test finished. str: ". $str);
       return;
     }
-
+				
     $to=new PersonFinderTwitterOAuth(TWITTER_CKEY, TWITTER_CSEC, trim($token["akey"]), trim($token["asec"]));
-    $result = $to->OAuthRequest("http://twitter.com/statuses/update.json","POST",array("status"=>$str));
+		$result = $to->OAuthRequest("http://api.twitter.com/1/statuses/update.json","POST",array("status"=>$str,"lat"=>$geo["lat"],"long"=>$geo["long"]));
     $this->l("tweet request. result in detail is as follows.");
     $json=json_decode($result, true);
     if (isset($json["error"])) {
