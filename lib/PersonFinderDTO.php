@@ -26,8 +26,8 @@ class PersonFinderDTO {
     $home_street=self::ifUrlDecode($home_street);
 		
 		$description=(string)$v->person->other;
-		$description=str_replace("description:","",$description);
 		$description=self::ifUrlDecode($description);
+		$description=str_replace("description:","",$description);
 		
     if(preg_match("/ /",$name)){
       $name=explode(" ",$name);
