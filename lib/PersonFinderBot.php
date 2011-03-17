@@ -92,8 +92,8 @@ class PersonFinderBot {
       // 場所データオブジェクトを生成
       $place = $this->getPlace($pfdata);
 			
-			// ジオコード生成用の緯度経度
-			$geo = $this->getLatLong($place, $pfdata);
+      // ジオコード生成用の緯度経度
+      $geo = $this->getLatLong($place, $pfdata);
 
       // つぶやき文字列を生成
       $str = $this->getText($pfdata, $place);
@@ -137,6 +137,8 @@ class PersonFinderBot {
 		
 		$url = 'http://maps.google.com/maps/geo?';
 		$results = json_decode(file_get_contents($url.http_build_query($params)));
+		
+		var_dump($results);
 		
 		$lat = $results->Placemark[0]->Point->coordinates[1];
 		$long = $results->Placemark[0]->Point->coordinates[0];
