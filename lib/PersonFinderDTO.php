@@ -6,15 +6,29 @@ class PersonFinderDTO {
 
   public static function createFromXML($v) {
     $uri =(string)$v->id;
+		
     $name=(string)$v->title;
-    $time=(string)$v->updated;
+		$name=self::ifUrlDecode($name);
+    
+		$time=(string)$v->updated;
     $time=date("m/d H:i",strtotime($time));
+		
     $post=(string)$v->author->name;
-    $home_state=(string)$v->person->home_state;
+    $post=self::ifUrlDecode($post);
+		
+		$home_state=(string)$v->person->home_state;
+		$home_state=self::ifUrlDecode($home_state);
+		
     $home_city=(string)$v->person->home_city;
+		$home_city=self::ifUrlDecode($home_city);
+		
     $home_street=(string)$v->person->home_street;
-    $description=(string)$v->person->other;
-    $description=str_replace("description:","",$description);
+    $home_street=self::ifUrlDecode($home_street);
+		
+		$description=(string)$v->person->other;
+		$description=str_replace("description:","",$description);
+		$description=self::ifUrlDecode($description);
+		
     if(preg_match("/ /",$name)){
       $name=explode(" ",$name);
       $name=$name[1]." ".$name[0];
@@ -26,6 +40,14 @@ class PersonFinderDTO {
     $status = (string)$v->person->note->status;
     return new PersonFinderDTO($uri, $name, $time, $post, $home_state, $home_city, $home_street, $description, $status);
   }
+	
+	// $srcが%から始まっていたらurldecodeする
+	public static function ifUrlDecode($src) {
+		if(strcmp(mb_substr($src,0,1,"UTF-8"),"%")==0) {
+			$src=mb_convert_encoding(urldecode($src), "UTF-8", "SHIFT_JIS");
+		}
+		return $src;
+	}
 
   public function __construct($uri, $name, $time, $post, $home_state, $home_city, $home_street, $description, $status) {
     $this->arr["uri"] = $uri;
