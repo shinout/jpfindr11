@@ -2,6 +2,7 @@
 if (isset($_GET["oauth_token"]) && isset($_GET["oauth_verifier"])) {
   header("Location: /register.php?oauth_token=".$_GET["oauth_token"]."&oauth_verifier=".$_GET["oauth_verifier"]);
 }
+exit("ちょっとまってて");
 require("../keys.php"); 
 $status = "input";
 $message = "";
@@ -89,4 +90,3 @@ if (isset($_POST["tw"])) {
 </pre>
 </body>
 </html>
-<?php

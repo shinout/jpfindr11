@@ -43,7 +43,7 @@ class PersonFinderDTO {
 	
 	// $srcが%から始まっていたらurldecodeする
 	public static function ifUrlDecode($src) {
-		if(strcmp(mb_substr($src,0,1,"UTF-8"),"%")==0) {
+		if(strcmp(mb_substr(trim($src),0,1,"UTF-8"),"%")==0) {
 			$src=mb_convert_encoding(urldecode($src), "UTF-8", "SHIFT_JIS");
 		}
 		return $src;
