@@ -129,19 +129,29 @@ class PersonFinderBot {
 		$pdata  = $state." ".$city." ".$street." ".$neighb;
 
 		$params = array (
-			'q'      => $pdata,
-			'key'    => GOOGLEMAP_AKEY,
-			'sensor' => 'false',
-			'output' => 'json',
+			'address' => $pdata,
+			'sensor'  => 'false',
+			'client'  => 'free-personfinderbot',		
 		);
 		
-		$url = 'http://maps.google.com/maps/geo?';
-		$results = json_decode(file_get_contents($url.http_build_query($params)));
+		$privateKey = 'RNvz7Spq2M4z3UTEaHDSqKfLR-c=';
+		$privateKey = str_replace("-", "+", $privateKey);
+		$privateKey = str_replace("_", "/", $privateKey);
+		$decodedPrivateKey = base64_decode($privateKey, true);
+
+		$url = '/maps/api/geocode/json?'.http_build_query($params);
 		
-		var_dump($results);
-		
-		$lat = $results->Placemark[0]->Point->coordinates[1];
-		$long = $results->Placemark[0]->Point->coordinates[0];
+		$hmacSignature = hash_hmac('sha1', $url, $decodedPrivateKey, true);
+
+		$signature = base64_encode($hmacSignature);
+		$signature = str_replace("+", "-", $signature);
+		$signature = str_replace("/", "_", $signature);
+
+		$url = "http://maps.google.com".$url."&signature=".$signature;
+		$results = json_decode(file_get_contents($url));
+
+		$lat = $results->results[0]->geometry->location->lat;
+		$long = $results->results[0]->geometry->location->lng;
 		
 		print "lat: ".$lat."\n";
 		print "long: ".$long."\n";
