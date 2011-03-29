@@ -85,25 +85,29 @@ class PersonFinderBot {
 
       // パースされたデータオブジェクトを生成
       $pfdata = PersonFinderDTO::createFromXML($v);
-
-      // URLを短くする
-      $pfdata->uri = $this->getShortenURL($pfdata->uri);
-
-      // 場所データオブジェクトを生成
-      $place = $this->getPlace($pfdata);
-			
-      // ジオコード生成用の緯度経度
-      $geo = $this->getLatLong($place, $pfdata);
-
-      // つぶやき文字列を生成
-      $str = $this->getText($pfdata, $place);
-
-      // 英語であれば英語用ツイート
-      if ($tweet_english && $pfdata->isEnglish()) {
-        $this->tweet($this->getTokenByName("英語"), $this->getEnglishText($pfdata, $place), $geo);
-      }
       
-      $parsed_arr[] = array($place, $str, $geo);
+      if(strcmp($pfdata->name, "") == 0)
+        continue;
+      else {
+        // URLを短くする
+        $pfdata->uri = $this->getShortenURL($pfdata->uri);
+
+        // 場所データオブジェクトを生成
+        $place = $this->getPlace($pfdata);
+			
+        // ジオコード生成用の緯度経度
+        $geo = $this->getLatLong($place, $pfdata);
+
+        // つぶやき文字列を生成
+        $str = $this->getText($pfdata, $place);
+
+        // 英語であれば英語用ツイート
+        if ($tweet_english && $pfdata->isEnglish()) {
+          $this->tweet($this->getTokenByName("英語"), $this->getEnglishText($pfdata, $place), $geo);
+        }
+      
+        $parsed_arr[] = array($place, $str, $geo);
+      }
     }
     return $parsed_arr;
   }
@@ -134,7 +138,7 @@ class PersonFinderBot {
 			'client'  => 'free-personfinderbot',		
 		);
 		
-		$privateKey = 'RNvz7Spq2M4z3UTEaHDSqKfLR-c=';
+		$privateKey = GOOGLEMAP_PKEY;
 		$privateKey = str_replace("-", "+", $privateKey);
 		$privateKey = str_replace("_", "/", $privateKey);
 		$decodedPrivateKey = base64_decode($privateKey, true);
